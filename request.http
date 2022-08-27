@@ -1,0 +1,2 @@
+###
+GET http://120.0.0.1:8000/api/fetch HTTP/1.1
