@@ -11,10 +11,6 @@ use Illuminate\Support\Facades\Log;
 
 class ConsumeUsers extends Command
 {
-    private $_arrConsumedAPI = [
-        "https://60e1b5fc5a5596001730f1d6.mockapi.io/api/v1/users/users_1",
-        "https://60e1b5fc5a5596001730f1d6.mockapi.io/api/v1/users/user_2"
-    ];
     /**
      * The name and signature of the console command.
      *
@@ -46,44 +42,25 @@ class ConsumeUsers extends Command
      */
     public function handle()
     {
-        Log::debug('>> Consuming users endpoints starts'.date("Y-m-d H:m:i"));
-        $arrValidFetchedAPI = [];
-        $arrInValidFetchedAPI = [];
-        foreach ($this->_arrConsumedAPI as $strUrl) {
-            $arrResponse = Http::get($strUrl);
-            if ($arrResponse->status() != Response::HTTP_OK) {
-                $arrInValidFetchedAPI[] = "status code = {$arrResponse->status()} , {$strUrl}";
-            } else {
-                $arrUsers = $arrResponse->object();
-                foreach ($arrUsers as $objUser) {
-                    $arrUser = (array) $objUser;
-                    $objValidate  = Validator::make($arrUser, [
-                        'firstName' => 'required',
-                        'lastName' => 'required',
-                        'email' => 'required|unique:user_fitcheds',
-                        'avatar' => 'required'
-                    ]);
-                    if (!$objValidate->fails()) {
-                        $boolRslt = DB::table('user_fitcheds')->insert([
-                            'firstName' => $objUser->firstName,
-                            'lastName' => $objUser->lastName,
-                            'email' => $objUser->email,
-                            'avatar' => $objUser->avatar,
-                        ]);
-                    }
-                }
-            }
-            $arrValidFetchedAPI[] = $strUrl;
+        Log::debug('>> Consuming users endpoints starts');
+        $arrUserFetchedData = \App\Service\FetchUserDataService::ConsumeUserDataUrls();
+        Log::debug(">> Consuming users endpoints data done successfully.");
+        Log::debug(">> Validate consiming users data starts");
+        $arrRole = [
+            'email' => 'required|unique:user_fetcheds',
+            'firstName' => 'required',
+            'lastName' => 'required',
+            'avatar' => 'required'
+        ];
+        $arrValidateUserData = \App\Service\ValidateFetchedUserDataService::Validate($arrUserFetchedData, $arrRole);
+        Log::debug(">> Validate consimed users data successfully");
+        Log::debug(">> Inserting consimed users data starts");
+        $rslt = \App\Service\InsertValidatedUsersDataService::Insert($arrValidateUserData);
+        if ($rslt) {
+            Log::debug(">> Inserting consimed users data successfully");
+        } else {
+            Log::debug(">> Failed to inserting consumed user data.");
         }
-        $strResponseMsg = "";
-        if (!empty($arrInValidFetchedAPI)) {
-            $strResponseMsg .= "  >> Failed to consume [".implode("] , [", $arrInValidFetchedAPI)."].";
-        }
-        if (!empty($arrValidFetchedAPI)) {
-            $strResponseMsg .= "  >> Apis -> [".implode("] , [", $arrValidFetchedAPI)."] consumed successfully.";
-        }
-        Log::debug(">> {$strResponseMsg}");
-        Log::debug('>> Consuming users endpoints ends'.date("Y-m-d H:m:i"));
         return 0;
     }
 }

@@ -20,12 +20,12 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 
-// Route::get('/fetch', [FetchUserDataController::class, 'Fetch']);
+/* Route::get('/fetch', [FetchUserDataController::class, 'Fetch']); */
 Route::get(
     '/fetcheduser',
     [FetchUserDataController::class, 'Get']
 )->middleware('auth.basic');;
 Route::get(
-    '/fetcheduser/search/{strSearchText}',
+    '/fetcheduser/search',
     [FetchUserDataController::class, 'SearchUser']
 )->middleware('auth.basic');;

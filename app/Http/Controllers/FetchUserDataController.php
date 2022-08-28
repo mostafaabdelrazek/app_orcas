@@ -12,15 +12,14 @@ use Illuminate\Support\Facades\Log;
 
 class FetchUserDataController extends Controller
 {
-    private $_arrConsumedAPI = [
-        "https://60e1b5fc5a5596001730f1d6.mockapi.io/api/v1/users/users_1",
-        "https://60e1b5fc5a5596001730f1d6.mockapi.io/api/v1/users/user_2"
-    ];
 
+    /*  
     protected function Fetch()
     {
         $arrValidFetchedAPI = [];
         $arrInValidFetchedAPI = [];
+        $arr = \App\Service\FetchUserDataService::ConsumeUserDataUrls();
+        var_dump($arr);
         foreach ($this->_arrConsumedAPI as $strUrl) {
             $arrResponse = Http::get($strUrl);
             if ($arrResponse->status() != Response::HTTP_OK) {
@@ -56,22 +55,33 @@ class FetchUserDataController extends Controller
         }
         Log::debug('An informational message.');
         return response($strResponseMsg, Response::HTTP_ACCEPTED)->header('Content-Type', 'text/plain');
-    }
+    } 
+    */
 
     protected function Get()
     {
-        $arrUser = DB::table('user_fitcheds')->paginate(10);
-        return response($arrUser, Response::HTTP_ACCEPTED);
+        $arrData = DB::table('user_fetcheds')->paginate(10);
+        return response(['Data' => $arrData, 'message'=> 'Data listed successfully', 'status' => Response::HTTP_OK], Response::HTTP_OK);
     }
 
     protected function SearchUser(Request $request)
     {
-        $strSearchField = "%".str_replace(" ", "%",$request->strSearchText)."%";
-        $arrData = DB::table('user_fitcheds')->
-        where('firstName', 'Like', "%$strSearchField%")->
-        orWhere('lastName', 'Like', "%$strSearchField%")->
-        orWhere('email', 'Like', "%$strSearchField%")->
-        paginate(10);
-        return response($arrData, Response::HTTP_ACCEPTED);
+        // still need to fix search scan n row issue
+        $strFirstName = "";
+        $strLastName = "";
+        $strEmail = "";
+        $arrDataRequest = $request->all();
+        if (empty($arrDataRequest['first_name']) && empty($arrDataRequest['last_name']) && empty($arrDataRequest['email'])) {
+            return response(['Data'=>[],'message'=>"Missing arguments", "status" => Response::HTTP_BAD_REQUEST], Response::HTTP_BAD_REQUEST);
+        }
+        $arrData = DB::table('user_fetcheds')->
+        when(!empty($arrDataRequest['first_name']),function($query) use ($arrDataRequest){
+            return $query->where('firstName' , "like", "%".$arrDataRequest['first_name']."%");
+        })->when(!empty($arrDataRequest['last_name']),function($query) use ($arrDataRequest){
+            return $query->where('lastName' , "like", "%".$arrDataRequest['last_name']."%");
+        })->when(!empty($arrDataRequest['email']),function($query) use ($arrDataRequest){
+            return $query->where('email' , "like", "%".$arrDataRequest['email']."%");
+        })->paginate(10);
+        return response(['Data'=> $arrData, 'message'=> 'Search done successfully', 'status' => Response::HTTP_OK], Response::HTTP_OK);
     }
 }
